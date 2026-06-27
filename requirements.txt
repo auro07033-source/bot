@@ -1,5 +1,6 @@
-flask
 requests
 telebot
 hsopyt
-pyrogram
+pyrogram==2.0.106
+uvloop==0.20.0
+flask==3.1.3
