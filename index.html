@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>TRT Haber Canlı Yayın</title>
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            background: #0a0a0a;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            font-family: system-ui, -apple-system, sans-serif;
+            padding: 16px;
+        }
+        .container {
+            max-width: 860px;
+            width: 100%;
+            background: #1a1a1a;
+            border-radius: 20px;
+            padding: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.8);
+            border: 1px solid #2a2a2a;
+        }
+        .player-wrapper {
+            position: relative;
+            width: 100%;
+            padding-top: 56.25%;
+            background: #000;
+            border-radius: 12px;
+            overflow: hidden;
+        }
+        #video {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #000;
+            outline: none;
+        }
+        .info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 16px;
+            color: #aaa;
+            font-size: 14px;
+            padding: 0 4px;
+        }
+        .info .badge {
+            background: #cc0000;
+            color: #fff;
+            padding: 4px 14px;
+            border-radius: 30px;
+            font-size: 12px;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+        }
+        .info .status {
+            color: #4caf50;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .status .dot {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            background: #4caf50;
+            border-radius: 50%;
+            animation: pulse 1.5s infinite;
+        }
+        @keyframes pulse {
+            0% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.4; transform: scale(0.8); }
+            100% { opacity: 1; transform: scale(1); }
+        }
+        .controls {
+            margin-top: 14px;
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        .btn {
+            background: #2a2a2a;
+            border: none;
+            color: #eee;
+            padding: 8px 24px;
+            border-radius: 30px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: 1px solid #3a3a3a;
+        }
+        .btn:hover {
+            background: #3a3a3a;
+            border-color: #cc0000;
+        }
+        .btn.primary {
+            background: #cc0000;
+            border-color: #cc0000;
+            color: #fff;
+        }
+        .btn.primary:hover {
+            background: #e60000;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 16px;
+            color: #555;
+            font-size: 12px;
+            border-top: 1px solid #222;
+            padding-top: 14px;
+        }
+        .footer a {
+            color: #cc0000;
+            text-decoration: none;
+        }
+        .footer a:hover {
+            text-decoration: underline;
+        }
+        @media (max-width: 480px) {
+            .container { padding: 12px; }
+            .info { flex-direction: column; gap: 10px; align-items: flex-start; }
+            .btn { padding: 6px 18px; font-size: 13px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="player-wrapper">
+            <video id="video" controls autoplay playsinline></video>
+        </div>
+
+        <div class="info">
+            <span class="badge">📺 TRT HABER</span>
+            <span class="status">
+                <span class="dot"></span> CANLI YAYIN
+            </span>
+        </div>
+
+        <div class="controls">
+            <button class="btn primary" onclick="reloadStream()">🔄 Yeniden Yükle</button>
+            <button class="btn" onclick="toggleMute()">🔇 Sesi Kapat</button>
+            <button class="btn" onclick="fullscreen()">⛶ Tam Ekran</button>
+        </div>
+
+        <div class="footer">
+            Canlı Yayın </a>
+        </div>
+    </div>
+
+    <script>
+        const STREAM_URL = "https://tv-trthaber.medya.trt.com.tr/master_720.m3u8";
+        let video = document.getElementById('video');
+        let hls = null;
+
+        function initPlayer() {
+            if (Hls.isSupported()) {
+                hls = new Hls({
+                    enableWorker: true,
+                    lowLatencyMode: true,
+                    backbufferLength: 30,
+                    maxBufferLength: 30,
+                    maxMaxBufferLength: 60,
+                });
+                hls.loadSource(STREAM_URL);
+                hls.attachMedia(video);
+                hls.on(Hls.Events.MANIFEST_PARSED, function() {
+                    video.play().catch(e => console.log("Otomatik oynatma engellendi:", e));
+                });
+                hls.on(Hls.Events.ERROR, function(event, data) {
+                    if (data.fatal) {
+                        console.error("Fatal hata, yeniden başlatılıyor...", data);
+                        hls.destroy();
+                        setTimeout(initPlayer, 2000);
+                    }
+                });
+            }
+            else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+                video.src = STREAM_URL;
+                video.addEventListener('loadedmetadata', function() {
+                    video.play().catch(e => console.log("Otomatik oynatma engellendi:", e));
+                });
+            } else {
+                alert('Tarayıcınız HLS video akışını desteklemiyor.');
+            }
+        }
+
+        function reloadStream() {
+            if (hls) {
+                hls.destroy();
+                hls = null;
+            }
+            video.pause();
+            video.src = '';
+            setTimeout(initPlayer, 500);
+        }
+
+        function toggleMute() {
+            video.muted = !video.muted;
+        }
+
+        function fullscreen() {
+            if (video.requestFullscreen) {
+                video.requestFullscreen();
+            } else if (video.webkitRequestFullscreen) {
+                video.webkitRequestFullscreen();
+            } else if (video.msRequestFullscreen) {
+                video.msRequestFullscreen();
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', initPlayer);
+    </script>
+</body>
+</html>
